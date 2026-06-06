@@ -80,3 +80,4 @@ For CSV/Excel import support, integrate [PapaParse](https://www.papaparse.com/) 
 ## License
 
 MIT — free to use, modify, and distribute.
+# sales-dashboard
