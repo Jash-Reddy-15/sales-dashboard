@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales & Revenue Analytics Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.40.0/iconfont/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --border-md: rgba(0,0,0,0.14);
+    --text: #1a1a18;
+    --text-2: #6b6b66;
+    --text-3: #a8a8a3;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --green: #3B6D11;
+    --green-light: #EAF3DE;
+    --amber: #854F0B;
+    --amber-light: #FAEEDA;
+    --pink: #993556;
+    --pink-light: #FBEAF0;
+    --c-elec: #378ADD;
+    --c-app: #1D9E75;
+    --c-home: #BA7517;
+    --c-sport: #D4537E;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --sidebar-w: 54px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+  /* Layout */
+  .shell { display: grid; grid-template-rows: 52px 1fr; grid-template-columns: var(--sidebar-w) 1fr; height: 100vh; overflow: hidden; }
+  .topbar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; background: var(--surface); border-bottom: 0.5px solid var(--border-md); z-index: 10; }
+  .sidebar { grid-row: 2; background: var(--surface); border-right: 0.5px solid var(--border-md); display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 6px; }
+  .main { grid-row: 2; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Topbar */
+  .tb-left { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 30px; height: 30px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; flex-shrink: 0; }
+  .tb-title { font-size: 14px; font-weight: 500; }
+  .tb-sub { font-size: 11px; color: var(--text-3); }
+  .tb-right { display: flex; align-items: center; gap: 8px; }
+  select { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 5px 9px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-md); background: var(--bg); color: var(--text); cursor: pointer; outline: none; }
+  select:focus { border-color: var(--blue); }
+  .btn { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 5px 10px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-md); background: var(--surface); color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background .15s; }
+  .btn:hover { background: var(--bg); }
+  .btn i { font-size: 14px; }
+
+  /* Sidebar nav */
+  .nav-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3); transition: all .15s; position: relative; }
+  .nav-icon:hover { background: var(--bg); color: var(--text-2); }
+  .nav-icon.active { background: var(--blue-light); color: var(--blue); }
+  .nav-icon i { font-size: 18px; }
+  .nav-sep { flex: 1; }
+
+  /* KPI row */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .kpi { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .kpi-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .badge { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; }
+  .badge-g { background: var(--green-light); color: var(--green); }
+  .badge-a { background: var(--amber-light); color: var(--amber); }
+  .badge-r { background: #FCEBEB; color: #A32D2D; }
+  .kpi-lbl { font-size: 11px; color: var(--text-3); }
+  .kpi-val { font-size: 22px; font-weight: 500; margin-top: 2px; }
+  .sparkline { display: flex; align-items: flex-end; gap: 2px; height: 28px; margin-top: 8px; }
+  .sp-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 3px; }
+
+  /* Chart row */
+  .charts-main { display: grid; grid-template-columns: 1.7fr 1fr; gap: 10px; }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .card-title { font-size: 13px; font-weight: 500; }
+  .card-meta { font-size: 11px; color: var(--text-3); }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; font-size: 11px; color: var(--text-2); }
+  .leg { display: flex; align-items: center; gap: 4px; }
+  .leg-sq { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* Bottom row */
+  .charts-bottom { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  /* Products */
+  .prod-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .prod-row:last-child { border-bottom: none; }
+  .prod-rank { font-size: 11px; color: var(--text-3); width: 14px; text-align: center; flex-shrink: 0; }
+  .prod-info { flex: 1; min-width: 0; }
+  .prod-name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prod-bar-wrap { height: 3px; background: var(--bg); border-radius: 2px; margin-top: 4px; }
+  .prod-bar { height: 3px; border-radius: 2px; }
+  .prod-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .prod-rev { font-size: 12px; font-weight: 500; font-family: 'DM Mono', monospace; }
+
+  /* Activity */
+  .act-row { display: flex; gap: 9px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .act-row:last-child { border-bottom: none; }
+  .act-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .act-text { font-size: 12px; line-height: 1.4; }
+  .act-time { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+
+  /* Tooltip */
+  .tooltip { position: fixed; background: var(--text); color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 5px; pointer-events: none; opacity: 0; transition: opacity .15s; z-index: 100; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="tb-left">
+      <div class="logo"><i class="ti ti-chart-bar"></i></div>
+      <div>
+        <div class="tb-title">Sales analytics</div>
+        <div class="tb-sub">Revenue intelligence dashboard</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <select id="yearSel" onchange="render()">
+        <option value="2023">FY 2023</option>
+        <option value="2024" selected>FY 2024</option>
+        <option value="all">All time</option>
+      </select>
+      <select id="catSel" onchange="render()">
+        <option value="all">All categories</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Apparel">Apparel</option>
+        <option value="Home">Home</option>
+        <option value="Sports">Sports</option>
+      </select>
+      <select id="regSel" onchange="render()">
+        <option value="all">All regions</option>
+        <option value="North">North</option>
+        <option value="South">South</option>
+        <option value="East">East</option>
+        <option value="West">West</option>
+      </select>
+      <button class="btn" onclick="document.getElementById('fileIn').click()"><i class="ti ti-upload"></i> Import CSV</button>
+      <input type="file" id="fileIn" accept=".csv,.xlsx" style="display:none" onchange="handleFile(this)">
+      <button class="btn" onclick="exportCSV()"><i class="ti ti-download"></i> Export</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-icon active" title="Dashboard"><i class="ti ti-layout-dashboard"></i></div>
+    <div class="nav-icon" title="Products"><i class="ti ti-box"></i></div>
+    <div class="nav-icon" title="Customers"><i class="ti ti-users"></i></div>
+    <div class="nav-icon" title="Orders"><i class="ti ti-receipt"></i></div>
+    <div class="nav-icon" title="Reports"><i class="ti ti-chart-dots"></i></div>
+    <div class="nav-sep"></div>
+    <div class="nav-icon" title="Settings"><i class="ti ti-settings"></i></div>
+  </nav>
+
+  <main class="main">
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="charts-main">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Revenue trend</div>
+          <div class="legend-row" id="trendLeg" style="margin:0"></div>
+        </div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="trendC" role="img" aria-label="Monthly revenue trend by product category">Monthly revenue trend</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Category mix</div>
+          <div class="card-meta" id="catMeta">FY 2024</div>
+        </div>
+        <div class="legend-row" id="catLeg"></div>
+        <div class="chart-wrap" style="height:168px">
+          <canvas id="catC" role="img" aria-label="Donut chart showing sales breakdown by product category">Category mix donut chart</canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-bottom">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Regional revenue</div></div>
+        <div class="chart-wrap" style="height:170px">
+          <canvas id="regC" role="img" aria-label="Bar chart comparing revenue across North, South, East and West regions">Regional revenue bar chart</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Top products</div></div>
+        <div id="prodList"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Recent activity</div></div>
+        <div id="actList"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="tooltip" id="tip"></div>
+
+<script>
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CC = { Electronics:'#378ADD', Apparel:'#1D9E75', Home:'#BA7517', Sports:'#D4537E' };
+const RC = ['#378ADD','#1D9E75','#BA7517','#D4537E'];
+
+const RAW = {
+  2023: {
+    trend: { Electronics:[42,45,50,53,48,60,65,70,68,72,80,95], Apparel:[20,22,18,25,30,28,35,38,32,40,55,65], Home:[15,18,20,22,19,25,28,30,27,32,38,45], Sports:[10,12,15,18,22,20,25,28,24,30,35,42] },
+    region: { North:185, South:142, East:163, West:210 },
+    products: [
+      {n:'MacBook Pro 14"', r:312, g:18, c:'Electronics'},
+      {n:'Running Shoes Pro', r:198, g:34, c:'Sports'},
+      {n:'Winter Jacket X', r:175, g:12, c:'Apparel'},
+      {n:'Coffee Maker Elite', r:154, g:8, c:'Home'},
+      {n:'Wireless Earbuds', r:143, g:22, c:'Electronics'},
+    ]
+  },
+  2024: {
+    trend: { Electronics:[55,58,62,70,65,78,88,92,85,95,108,130], Apparel:[28,30,25,34,42,38,48,52,44,56,75,88], Home:[20,23,26,29,25,32,36,40,35,42,50,60], Sports:[15,17,20,25,30,27,34,38,32,40,48,58] },
+    region: { North:238, South:182, East:210, West:275 },
+    products: [
+      {n:'MacBook Pro 16"', r:428, g:27, c:'Electronics'},
+      {n:'Trail Runners Ultra', r:265, g:42, c:'Sports'},
+      {n:'Puffer Coat Pro', r:230, g:31, c:'Apparel'},
+      {n:'Smart Coffee System', r:198, g:19, c:'Home'},
+      {n:'ANC Headphones', r:187, g:35, c:'Electronics'},
+    ]
+  }
+};
+
+const ACTIVITY = [
+  { dot:'#378ADD', text:'MacBook Pro 16" — 24 units sold · North region', time:'2 min ago' },
+  { dot:'#1D9E75', text:'New order: $4,280 from West region', time:'11 min ago' },
+  { dot:'#BA7517', text:'Sports category hit monthly target', time:'38 min ago' },
+  { dot:'#D4537E', text:'Apparel revenue up 31% vs last month', time:'1 hr ago' },
+  { dot:'#378ADD', text:'Trail Runners Ultra — stock low alert', time:'2 hr ago' },
+];
+
+let charts = {};
+
+function gY(){ return document.getElementById('yearSel').value; }
+function gC(){ return document.getElementById('catSel').value; }
+function gR(){ return document.getElementById('regSel').value; }
+
+function getData() {
+  const y=gY(), cat=gC(), reg=gR();
+  const yrs = y==='all' ? [2023,2024] : [+y];
+  const cats = cat==='all' ? ['Electronics','Apparel','Home','Sports'] : [cat];
+  let trend={}, region={North:0,South:0,East:0,West:0}, prods=[];
+  yrs.forEach(yr => {
+    const d = RAW[yr];
+    cats.forEach(c => {
+      if(!trend[c]) trend[c] = Array(12).fill(0);
+      d.trend[c].forEach((v,i) => trend[c][i] += v);
+    });
+    Object.keys(d.region).forEach(r => { if(reg==='all'||r===reg) region[r] += d.region[r]; });
+    d.products.forEach(p => {
+      if(cat==='all'||p.c===cat) {
+        const e = prods.find(x=>x.n===p.n);
+        if(e){ e.r+=p.r; e.g=Math.round((e.g+p.g)/2); } else prods.push({...p});
+      }
+    });
+  });
+  let totalRev=0;
+  cats.forEach(c => { if(trend[c]) trend[c].forEach(v => totalRev+=v); });
+  prods.sort((a,b) => b.r-a.r);
+  return { trend, region, prods, totalRev, cats };
+}
+
+function spark(data, color) {
+  const max = Math.max(...data)||1;
+  return data.map(v=>`<div class="sp-bar" style="height:${Math.round(v/max*24)+3}px;background:${color}20;border-top:2px solid ${color}"></div>`).join('');
+}
+
+function render() {
+  const { trend, region, prods, totalRev, cats } = getData();
+  const totalOrders = Math.round(totalRev * 8.3);
+  const avgOrder = totalOrders > 0 ? Math.round(totalRev*1000/totalOrders) : 0;
+  const topCat = cats.reduce((a,c) => {
+    const s = (trend[c]||[]).reduce((x,y)=>x+y,0);
+    return s > (trend[a]||[]).reduce((x,y)=>x+y,0) ? c : a;
+  }, cats[0]);
+  const tArr = trend[cats[0]] || Array(12).fill(0);
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#E6F1FB"><i class="ti ti-currency-dollar" style="color:#185FA5"></i></div>
+        <span class="badge badge-g">+18.4%</span>
+      </div>
+      <div class="kpi-lbl">Total revenue</div>
+      <div class="kpi-val">$${totalRev.toLocaleString()}K</div>
+      <div class="sparkline">${spark(tArr,'#378ADD')}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#E1F5EE"><i class="ti ti-shopping-cart" style="color:#0F6E56"></i></div>
+        <span class="badge badge-g">+12.1%</span>
+      </div>
+      <div class="kpi-lbl">Total orders</div>
+      <div class="kpi-val">${totalOrders.toLocaleString()}</div>
+      <div class="sparkline">${spark([8,9,11,10,13,12,15,14,13,16,18,20],'#1D9E75')}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#FAEEDA"><i class="ti ti-receipt" style="color:#854F0B"></i></div>
+        <span class="badge badge-g">+5.7%</span>
+      </div>
+      <div class="kpi-lbl">Avg order value</div>
+      <div class="kpi-val">$${avgOrder}</div>
+      <div class="sparkline">${spark([40,42,41,44,43,45,46,44,47,46,48,50],'#BA7517')}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#FBEAF0"><i class="ti ti-star" style="color:#993556"></i></div>
+        <span class="badge badge-a">Steady</span>
+      </div>
+      <div class="kpi-lbl">Top category</div>
+      <div class="kpi-val">${topCat}</div>
+      <div class="sparkline">${spark((trend[topCat]||[]).slice(-12),'#D4537E')}</div>
+    </div>`;
+
+  destroyChart('trendC');
+  charts.trendC = new Chart(document.getElementById('trendC'), {
+    type: 'line',
+    data: { labels: MONTHS, datasets: cats.map(c => ({ label:c, data:trend[c]||[], borderColor:CC[c], backgroundColor:CC[c]+'15', fill:true, tension:.4, pointRadius:2, pointHoverRadius:5, borderWidth:2 })) },
+    options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${ctx.parsed.y}K`}} },
+      scales: { x:{grid:{display:false},ticks:{font:{size:10},autoSkip:false,maxRotation:0}}, y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10},callback:v=>'$'+v+'K'}} } }
+  });
+  document.getElementById('trendLeg').innerHTML = cats.map(c=>`<span class="leg"><span class="leg-sq" style="background:${CC[c]}"></span>${c}</span>`).join('');
+
+  const catTotals = cats.map(c=>(trend[c]||[]).reduce((a,b)=>a+b,0));
+  const tot = catTotals.reduce((a,b)=>a+b,0)||1;
+  destroyChart('catC');
+  charts.catC = new Chart(document.getElementById('catC'), {
+    type: 'doughnut',
+    data: { labels:cats, datasets:[{data:catTotals, backgroundColor:cats.map(c=>CC[c]), borderWidth:2, borderColor:'#fff'}] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${Math.round(ctx.parsed/tot*100)}%`}} } }
+  });
+  document.getElementById('catLeg').innerHTML = cats.map((c,i)=>`<span class="leg"><span class="leg-sq" style="background:${CC[c]}"></span>${c} ${Math.round(catTotals[i]/tot*100)}%</span>`).join('');
+  document.getElementById('catMeta').textContent = gY()==='all'?'2023–24':gY()==='2023'?'FY 2023':'FY 2024';
+
+  const regKeys = Object.keys(region).filter(r=>gR()==='all'||r===gR());
+  destroyChart('regC');
+  charts.regC = new Chart(document.getElementById('regC'), {
+    type: 'bar',
+    data: { labels:regKeys, datasets:[{label:'Revenue ($K)', data:regKeys.map(r=>region[r]), backgroundColor:RC, borderRadius:4, borderSkipped:false}] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>`$${ctx.parsed.y}K`}} },
+      scales: { x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10},callback:v=>'$'+v+'K'}} } }
+  });
+
+  const maxR = prods[0]?.r||1;
+  document.getElementById('prodList').innerHTML = prods.slice(0,5).map((p,i)=>`
+    <div class="prod-row">
+      <div class="prod-rank">${i+1}</div>
+      <div class="prod-info">
+        <div class="prod-name" title="${p.n}">${p.n}</div>
+        <div class="prod-bar-wrap"><div class="prod-bar" style="width:${Math.round(p.r/maxR*100)}%;background:${CC[p.c]}"></div></div>
+      </div>
+      <div class="prod-right">
+        <div class="prod-rev">$${p.r}K</div>
+        <span class="badge ${p.g>30?'badge-g':p.g>15?'badge-a':'badge-r'}">+${p.g}%</span>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('actList').innerHTML = ACTIVITY.map(a=>`
+    <div class="act-row">
+      <div class="act-dot" style="background:${a.dot}"></div>
+      <div><div class="act-text">${a.text}</div><div class="act-time">${a.time}</div></div>
+    </div>`).join('');
+}
+
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function handleFile(input) {
+  const f = input.files[0]; if(!f) return;
+  alert(`File "${f.name}" loaded. In a production build, CSV/Excel data would replace the sample dataset.`);
+}
+
+function exportCSV() {
+  const { prods } = getData();
+  const rows = [['Rank','Product','Revenue (K)','Growth %','Category']];
+  prods.forEach((p,i) => rows.push([i+1, p.n, p.r, p.g, p.c]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv,' + encodeURIComponent(csv);
+  a.download = 'sales-data.csv';
+  a.click();
+}
+
+render();
+</script>
+</body>
+</html>
